@@ -100,11 +100,18 @@ jsonParserForDef etd =
           : parseRecords (if newtyping then Just name else Nothing) unwrap fields
           )
       ETypeSum (ESum name opts (SumEncoding' encodingType) _ unarystring) ->
-            decoderType name ++ "\n" ++
-            makeName name ++ " =" ++
-                case allUnaries unarystring opts of
-                    Just names -> " " ++ deriveUnaries names
-                    Nothing    -> "\n" ++ encodingDictionary opts ++ isObjectSet ++ "\n" ++ declLine opts ++ "\n"
+         case opts of
+            [con] ->
+               decoderType name ++ "\n" ++
+               makeName name ++ " =" ++ "\n" ++ encodingDictionary opts ++ isObjectSet ++ "\n" ++ declLine opts ++ "\n"
+
+            _     ->  
+               -- TODO: Check if single constructor or all constructors are nullary
+               decoderType name ++ "\n" ++
+               makeName name ++ " =" ++
+                   case allUnaries unarystring opts of
+                       Just names -> " " ++ deriveUnaries names
+                       Nothing    -> "\n" ++ encodingDictionary opts ++ isObjectSet ++ "\n" ++ declLine opts ++ "\n"
           where
             tab n s = replicate n ' ' ++ s
             typename = et_name name
@@ -203,10 +210,13 @@ jsonSerForDef etd =
           ++ intercalate "\n   ," (map (\(fldName, fldType) -> " (\"" ++ fldName ++ "\", " ++ jsonSerForType fldType ++ " val." ++ fixReserved fldName ++ ")") fields)
           ++ "\n   ]\n"
       ETypeSum (ESum name opts (SumEncoding' se) _ unarystring) ->
-        case allUnaries unarystring opts of
-            Nothing -> defaultEncoding opts
-            Just strs -> unaryEncoding strs
-          where
+        case opts of
+           [con] -> defaultEncoding opts
+           _     ->  
+              case allUnaries unarystring opts of
+                  Nothing -> defaultEncoding opts
+                  Just strs -> unaryEncoding strs
+        where
               encodeFunction = case se of
                                    ObjectWithSingleField -> "encodeSumObjectWithSingleField"
                                    TwoElemArray -> "encodeSumTwoElementArray"
